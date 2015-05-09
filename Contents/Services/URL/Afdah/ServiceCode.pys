@@ -1,0 +1,109 @@
+import urllib2
+import string, base64, re
+from lxml import html
+import os
+import sys
+
+try:
+	path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0]+"Plug-ins\Afdah.bundle\Contents\Services\URL\Afdah\Modules"
+except:
+	path = os.getcwd().split("Plug-in Support")[0]+"Plug-ins/Afdah.bundle/Contents/Services/URL/Afdah/Modules"
+if path not in sys.path:
+	sys.path.append(path)
+
+import jsbeautifier
+
+HTTP_HEADERS = {
+	'Accept	text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+	'Accept-Encoding:	gzip, deflate',
+	'Accept-Language:	en-US,en;q=0.5',
+	'Connection:		keep-alive',
+	'Referer:		http://afdah.tv',
+	'User-Agent:		Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0'
+}
+
+BASE_URL = 'http://putlocker.is/'
+
+########################################################################################
+def NormalizeURL(url):
+
+	return url.split('&')[0]
+
+
+
+
+########################################################################################
+def MetadataObjectForURL(url):
+
+	page_data = HTML.ElementFromURL(url)
+	title = page_data.xpath("//h1[@class='entry-title']/a/text()")[0].replace('Watch ','',1).replace(' Online','',1)
+	description = page_data.xpath("//div[contains(@style,'line-height:1.4')]/text()")[0]
+	thumb = page_data.xpath("//img[@height='160']/@src")[0]
+
+	return VideoClipObject(
+		title = title,
+		summary = description,
+		thumb = thumb
+	)
+
+########################################################################################
+def MediaObjectsForURL(url):
+
+	return [
+		MediaObject(
+			parts = [
+				PartObject(key=Callback(PlayVideo, url=url, post_url=url, res=720))
+			],
+			video_resolution = 720,
+			bitrate = 1500,
+			container = Container.MP4,
+			video_codec = VideoCodec.H264,
+			audio_codec = AudioCodec.AAC,
+			audio_channels = 2,
+			optimized_for_streaming = True if Client.Product != 'Plex Web' else False
+		)
+	]
+
+########################################################################################
+@indirect
+def PlayVideo(url, res):
+
+	page = HTML.ElementFromURL(url)
+	view_url = ""
+	for each in page.xpath("//a[@rel='nofollow']"):
+		try:
+			view_url = str(each.xpath("./@href")[0]) + "," + view_url
+		except:
+			continue
+
+	view_url = view_url.rstrip(',')
+	view_url = sorted(view_url.split(','), key=str.lower)
+
+	for vurl in view_url:
+		if "allmyvideos" in vurl:
+			vurl = vurl.replace('.net/','.net/embed-',1) + '.html'
+			video_link = HTTP.Request(vurl).content
+			try:
+				video_url = Regex('"file" :\s"([^"]+)"').search(video_link).groups()[0]
+				return IndirectResponse(VideoClipObject, key=video_url)
+				break
+			except:
+				pass
+		elif "thevideo" in vurl:
+			vurl = vurl.replace('.me/','.me/embed-',1) + '.html'
+			video_link = HTTP.Request(vurl).content
+			try:
+				video_url = Regex('file:\s"([^"]+)"').search(video_link).groups()[0]
+				return IndirectResponse(VideoClipObject, key=video_url)
+				break
+			except:
+				pass
+		elif "vodlocker" in vurl:
+			vurl = vurl.replace('.com/','.com/embed-',1) + '.html'
+			video_link = HTTP.Request(vurl).content
+			try:
+				video_url = Regex('file:\s"([^"]+)"').search(video_link).groups()[0]
+				return IndirectResponse(VideoClipObject, key=video_url)
+				break
+			except:
+				pass
