@@ -77,33 +77,38 @@ def PlayVideo(url, res):
 			continue
 
 	view_url = view_url.rstrip(',')
-	view_url = sorted(view_url.split(','), key=str.lower)
+	view_url = view_url.split(',')
 
 	for vurl in view_url:
-		if "allmyvideos" in vurl:
+		if "vodlocker" in vurl:
+			vurl = vurl.replace('.com/','.com/embed-',1) + '.html'
+			video_link = HTTP.Request(vurl).content
+			try:
+				video_url = Regex('file:\s"([^"]+)"').search(video_link).groups()[0]
+				return IndirectResponse(VideoClipObject, key=video_url)
+			except:
+				continue
+		elif "realvid" in vurl:
+			vurl = vurl.replace('.net/','.net/embed-',1) + '.html'
+			video_link = HTTP.Request(vurl).content
+			try:
+				video_url = Regex('file:\'([^"]+)\'').search(video_link).groups()[0].replace("','provider':'http","",1)
+				return IndirectResponse(VideoClipObject, key=video_url)
+			except:
+				continue
+		elif "allmyvideos" in vurl:
 			vurl = vurl.replace('.net/','.net/embed-',1) + '.html'
 			video_link = HTTP.Request(vurl).content
 			try:
 				video_url = Regex('"file" :\s"([^"]+)"').search(video_link).groups()[0]
 				return IndirectResponse(VideoClipObject, key=video_url)
-				break
 			except:
-				pass
+				continue
 		elif "thevideo" in vurl:
 			vurl = vurl.replace('.me/','.me/embed-',1) + '.html'
 			video_link = HTTP.Request(vurl).content
 			try:
 				video_url = Regex('file:\s"([^"]+)"').search(video_link).groups()[0]
 				return IndirectResponse(VideoClipObject, key=video_url)
-				break
 			except:
-				pass
-		elif "vodlocker" in vurl:
-			vurl = vurl.replace('.com/','.com/embed-',1) + '.html'
-			video_link = HTTP.Request(vurl).content
-			try:
-				video_url = Regex('file:\s"([^"]+)"').search(video_link).groups()[0]
-				return IndirectResponse(VideoClipObject, key=video_url)
-				break
-			except:
-				pass
+				continue
