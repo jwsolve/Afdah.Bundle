@@ -1,44 +1,17 @@
-import urllib2
-import string, base64, re
-from lxml import html
-import os
-import sys
-
-try:
-	path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0]+"Plug-ins\Afdah.bundle\Contents\Services\URL\Afdah\Modules"
-except:
-	path = os.getcwd().split("Plug-in Support")[0]+"Plug-ins/Afdah.bundle/Contents/Services/URL/Afdah/Modules"
-if path not in sys.path:
-	sys.path.append(path)
-
-import jsbeautifier
-
-HTTP_HEADERS = {
-	'Accept	text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-	'Accept-Encoding:	gzip, deflate',
-	'Accept-Language:	en-US,en;q=0.5',
-	'Connection:		keep-alive',
-	'Referer:		http://afdah.tv',
-	'User-Agent:		Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0'
-}
-
-BASE_URL = 'http://putlocker.is/'
+import urllib,urllib2,re,urlparse
 
 ########################################################################################
 def NormalizeURL(url):
 
 	return url.split('&')[0]
 
-
-
-
 ########################################################################################
 def MetadataObjectForURL(url):
 
 	page_data = HTML.ElementFromURL(url)
-	title = page_data.xpath("//h1[@class='entry-title']/a/text()")[0].replace('Watch ','',1).replace(' Online','',1)
-	description = page_data.xpath("//div[contains(@style,'line-height:1.4')]/text()")[0]
-	thumb = page_data.xpath("//img[@height='160']/@src")[0]
+	title = page_data.xpath("//h2/text()")[0]
+	description = page_data.xpath("//div[contains(@class,'desc-text')]/text()")[0].strip()
+	thumb = page_data.xpath("//div[@class='poster']/img/@src")[0]
 
 	return VideoClipObject(
 		title = title,
@@ -56,10 +29,6 @@ def MediaObjectsForURL(url):
 			],
 			video_resolution = 720,
 			bitrate = 1500,
-			container = Container.MP4,
-			video_codec = VideoCodec.H264,
-			audio_codec = AudioCodec.AAC,
-			audio_channels = 2,
 			optimized_for_streaming = True if Client.Product != 'Plex Web' else False
 		)
 	]
@@ -69,46 +38,22 @@ def MediaObjectsForURL(url):
 def PlayVideo(url, res):
 
 	page = HTML.ElementFromURL(url)
-	view_url = ""
-	for each in page.xpath("//a[@rel='nofollow']"):
-		try:
-			view_url = str(each.xpath("./@href")[0]) + "," + view_url
-		except:
-			continue
+	url = page.xpath("//div[@id='video1']/center/iframe/@src")[0]
 
-	view_url = view_url.rstrip(',')
-	view_url = view_url.split(',')
+	if "google" in url:
+		return IndirectResponse(VideoClipObject, key = url)
+	else:
+		url = urlparse.urlparse(url).query
+		url = urlparse.parse_qs(url)['ref'][0]
+		url = 'http://videomega.tv/iframe.php?ref=%s' % url
+		referer = url
+		req = urllib2.Request(url,None)
+		req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 6.1; rv:34.0) Gecko/20100101 Firefox/34.0')
+		req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
+		req.add_header('Referer', referer)
+		response = urllib2.urlopen(req)
+		link = response.read()
+		response.close()
 
-	for vurl in view_url:
-		if "vodlocker" in vurl:
-			vurl = vurl.replace('.com/','.com/embed-',1) + '.html'
-			video_link = HTTP.Request(vurl).content
-			try:
-				video_url = Regex('file:\s"([^"]+)"').search(video_link).groups()[0]
-				return IndirectResponse(VideoClipObject, key=video_url)
-			except:
-				continue
-		elif "realvid" in vurl:
-			vurl = vurl.replace('.net/','.net/embed-',1) + '.html'
-			video_link = HTTP.Request(vurl).content
-			try:
-				video_url = Regex('file:\'([^"]+)\'').search(video_link).groups()[0].replace("','provider':'http","",1)
-				return IndirectResponse(VideoClipObject, key=video_url)
-			except:
-				continue
-		elif "allmyvideos" in vurl:
-			vurl = vurl.replace('.net/','.net/embed-',1) + '.html'
-			video_link = HTTP.Request(vurl).content
-			try:
-				video_url = Regex('"file" :\s"([^"]+)"').search(video_link).groups()[0]
-				return IndirectResponse(VideoClipObject, key=video_url)
-			except:
-				continue
-		elif "thevideo" in vurl:
-			vurl = vurl.replace('.me/','.me/embed-',1) + '.html'
-			video_link = HTTP.Request(vurl).content
-			try:
-				video_url = Regex('file:\s"([^"]+)"').search(video_link).groups()[0]
-				return IndirectResponse(VideoClipObject, key=video_url)
-			except:
-				continue
+		video_url = re.compile('source src="(.+?)"').findall(link)[0].split("&")[0]
+		return IndirectResponse(VideoClipObject, key = video_url)

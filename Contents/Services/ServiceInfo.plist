@@ -8,6 +8,7 @@
       <key>URLPatterns</key>
       <array>
         <string>http://afdah.tv/</string>
+        <string>http://www.afdah.ws/</string>
       </array>
     </dict>
   </dict>

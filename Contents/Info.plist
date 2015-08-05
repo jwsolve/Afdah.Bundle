@@ -16,5 +16,8 @@
 	<string>2</string>
 	<key>PlexClientPlatforms</key>
 	<string>*</string>
+	<key>PlexPluginCodePolicy</key>
+	<string>Elevated</string>
+
 </dict>
 </plist>
