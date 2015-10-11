@@ -9,8 +9,8 @@ def NormalizeURL(url):
 def MetadataObjectForURL(url):
 
 	page_data = HTML.ElementFromURL(url)
-	title = page_data.xpath("//h2/text()")[0]
-	description = page_data.xpath("//div[contains(@class,'desc-text')]/text()")[0].strip()
+	title = page_data.xpath("//h2/text()")[0].replace('Watch ','',-1).replace(' Online HD','',-1)
+	description = page_data.xpath("//meta[@name='description']/@content")[0].strip()
 	thumb = page_data.xpath("//div[@class='poster']/img/@src")[0]
 
 	return VideoClipObject(
@@ -56,4 +56,14 @@ def PlayVideo(url, res):
 		response.close()
 
 		video_url = re.compile('source src="(.+?)"').findall(link)[0].split("&")[0]
-		return IndirectResponse(VideoClipObject, key = video_url)
+		req = urllib2.Request(video_url)
+		try: 
+			urllib2.urlopen(req)
+			status = "Found"
+		except urllib2.URLError as e:
+			status = e.reason
+
+		if status == "Found":
+			return IndirectResponse(VideoClipObject, key = video_url)
+		else:
+			return ObjectContainer(header="Error", message="Video not found")

@@ -1,0 +1,9 @@
+[
+        {
+                "id": "site_url",
+                "label": "Site URL",
+                "type": "enum",
+                "values": ["http://afdah.tv","http://www.afdah.ws"],
+                "default": "http://www.afdah.ws"
+        }
+]

@@ -36,6 +36,14 @@ def Start():
 	HTTP.Headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0'
 	HTTP.Headers['Cookie'] = 'path=/;'
 	HTTP.Headers['Cookie'] = 'domain=.afdah.ws;'
+
+####################################################################################################
+def ValidatePrefs():
+
+	try:
+		test = HTTP.Request(Prefs['site_url'], cacheTime=0).content
+	except:
+		return ObjectContainer(header='Invalid URL', message='Please input a valid and existing URL, including http://')
 	
 ######################################################################################
 # Menu hierarchy
@@ -44,8 +52,9 @@ def Start():
 def MainMenu():
 
 	container = ObjectContainer()
-	page_data = HTML.ElementFromURL(BASE_URL)
+	page_data = HTML.ElementFromURL(Prefs['site_url'])
 	updater.add_button_to(container, PerformUpdate)
+	container.add(PrefsObject(title='Preferences'))
 	for each in page_data.xpath("//ul[contains(@class,'main-menu')]/li"):
 		url = each.xpath("./a/@href")[0]
 		title = each.xpath("./a/text()")[0]
@@ -68,7 +77,7 @@ def PerformUpdate():
 def ShowCategory(title, category, page_count):
 
 	oc = ObjectContainer(title1 = title)
-	page_data = HTML.ElementFromURL(BASE_URL + '/movies/' + str(category) + '/page/' + str(page_count) + '/')
+	page_data = HTML.ElementFromURL(Prefs['site_url'] + '/movies/' + str(category) + '/page/' + str(page_count) + '/')
 	
 	for each in page_data.xpath("//div[@class='short-item']"):
 		url = each.xpath("./a/@href")[0]
@@ -78,7 +87,7 @@ def ShowCategory(title, category, page_count):
 		oc.add(DirectoryObject(
 			key = Callback(EpisodeDetail, title = title, url = url),
 			title = title,
-			thumb = BASE_URL + thumb
+			thumb = Prefs['site_url'] + thumb
 			)
 		)
 
@@ -97,14 +106,14 @@ def EpisodeDetail(title, url):
 	
 	oc = ObjectContainer(title1 = title)
 	page_data = HTML.ElementFromURL(url)
-	title = page_data.xpath("//h2/text()")[0]
-	description = page_data.xpath("//div[contains(@class,'desc-text')]/text()")[0].strip()
+	title = page_data.xpath("//h2/text()")[0].replace('Watch ','',-1).replace(' Online HD','',-1)
+	description = page_data.xpath("//meta[@name='description']/@content")[0].strip()
 	thumb = page_data.xpath("//div[@class='poster']/img/@src")[0]
 	
 	oc.add(VideoClipObject(
 		url = url,
 		title = title,
-		thumb = Resource.ContentsOfURLWithFallback(url = BASE_URL + thumb, fallback='icon-cover.png'),
+		thumb = Resource.ContentsOfURLWithFallback(url = Prefs['site_url'] + thumb, fallback='icon-cover.png'),
 		summary = description
 		)
 	)	
