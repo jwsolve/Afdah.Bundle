@@ -1,4 +1,14 @@
-import urllib,urllib2,re,urlparse
+import urllib,urllib2,re,urlparse,os,sys
+from lxml import html
+
+try:
+	path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0]+"Plug-ins/Afdah.bundle/Contents/Services/URL/Afdah/Modules"
+except:
+	path = os.getcwd().split("Plug-in Support")[0]+"Plug-ins/Afdah.bundle/Contents/Services/URL/Afdah/Modules"
+if path not in sys.path:
+	sys.path.append(path)
+
+import jsbeautifier
 
 ########################################################################################
 def NormalizeURL(url):
@@ -34,36 +44,26 @@ def MediaObjectsForURL(url):
 	]
 
 ########################################################################################
-@indirect
 def PlayVideo(url, res):
 
-	page = HTML.ElementFromURL(url)
-	url = page.xpath("//div[@id='video1']/center/iframe/@src")[0]
+	html = HTML.ElementFromURL(url)
 
-	if "google" in url:
-		return IndirectResponse(VideoClipObject, key = url)
-	else:
-		url = urlparse.urlparse(url).query
-		url = urlparse.parse_qs(url)['ref'][0]
-		url = 'http://videomega.tv/iframe.php?ref=%s' % url
-		referer = url
-		req = urllib2.Request(url,None)
-		req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 6.1; rv:34.0) Gecko/20100101 Firefox/34.0')
-		req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
-		req.add_header('Referer', referer)
-		response = urllib2.urlopen(req)
-		link = response.read()
-		response.close()
+	url = html.xpath("//div[@id='video1']/center/iframe/@src")[0]
 
-		video_url = re.compile('source src="(.+?)"').findall(link)[0].split("&")[0]
-		req = urllib2.Request(video_url)
-		try: 
-			urllib2.urlopen(req)
-			status = "Found"
-		except urllib2.URLError as e:
-			status = e.reason
+	url = urlparse.urlparse(url).query
+	url = urlparse.parse_qs(url)['ref'][0]
+	url = 'http://videomega.tv/iframe.php?ref=%s' % url
+	referer = url
+	req = urllib2.Request(url,None)
+	req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 6.1; rv:34.0) Gecko/20100101 Firefox/34.0')
+	req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
+	req.add_header('Referer', referer)
+	response = urllib2.urlopen(req)
+	link = response.read()
+	response.close()
 
-		if status == "Found":
-			return IndirectResponse(VideoClipObject, key = video_url)
-		else:
-			return ObjectContainer(header="Error", message="Video not found")
+	filekey = Regex('eval([^"]+.*)').search(link).group(0)
+	video_url = jsbeautifier.beautify(filekey)
+	video_url = video_url.replace('$("video").attr("src", "','',1).replace('");','',1)
+
+	return Redirect(video_url)
