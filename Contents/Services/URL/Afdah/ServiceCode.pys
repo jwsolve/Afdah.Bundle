@@ -104,13 +104,11 @@ except:
 if path not in sys.path:
 	sys.path.append(path)
 
-import jsbeautifier
-from jsbeautifier.unpackers import packer
-
 ########################################################################################
 def NormalizeURL(url):
 
-	return url.split('&')[0]
+	return url
+	#.split('&')[0]
 
 ########################################################################################
 def MetadataObjectForURL(url):
